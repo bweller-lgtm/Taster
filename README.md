@@ -28,10 +28,10 @@ Each cycle sharpens the profile. What starts as "sort my photos" becomes a rich,
 
 The original use case. Ships with a built-in profile that classifies photos into Share / Storage / Review / Ignore. Run it on a year of camera roll and get the 200 worth sharing for about a dollar.
 
-Here's a real profile Sommelier generated from a family photo library. Nobody wrote this by hand -- it was synthesized from examples:
-
 <details>
-<summary><strong>Generated taste profile: baby photos</strong></summary>
+<summary><strong>Example: AI-generated taste profile from a family photo library</strong></summary>
+
+Nobody wrote this by hand -- it was synthesized from examples:
 
 > **Philosophy:** Photos worth sharing capture genuine moments of connection and joy between baby and loved ones. They should highlight the baby's expressions, engagement with the world, and the loving interactions they share, all presented in a visually clear and appealing manner.
 >
@@ -57,9 +57,9 @@ Here's a real profile Sommelier generated from a family photo library. Nobody wr
 > - *"If both parent and baby are in the photo, ensure both have engaged and positive expressions."*
 > - *"Reject photos even if technically good if the baby looks unhappy (unless comically so)."*
 
-</details>
-
 That profile is both a human-readable style guide *and* an executable classifier. Every future photo is evaluated against those exact criteria.
+
+</details>
 
 ### Screening at Scale
 
