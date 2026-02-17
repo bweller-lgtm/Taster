@@ -1,4 +1,4 @@
-# LLM Taste Cloner Dependencies
+# Sommelier Dependencies
 
 # AI providers (install the ones you need — at least one required)
 google-generativeai>=0.3.0     # For Gemini (recommended — cheapest, native video/PDF)

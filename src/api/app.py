@@ -1,4 +1,4 @@
-"""FastAPI application factory for the Taste Cloner API."""
+"""FastAPI application factory for the Sommelier API."""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -8,7 +8,7 @@ from src import __version__
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(
-        title="Taste Cloner API",
+        title="Sommelier API",
         description="Universal AI-powered media classification platform",
         version=__version__,
     )
@@ -36,7 +36,7 @@ def create_app() -> FastAPI:
     @app.get("/")
     async def root():
         return {
-            "name": "Taste Cloner API",
+            "name": "Sommelier API",
             "version": __version__,
             "docs": "/docs",
         }
