@@ -2,9 +2,9 @@
 
 **Teach AI your taste. Apply it to everything.**
 
-Sort 1,000 family photos in 10 minutes for $1.30. Or extract coding standards from your best code. Or screen 500 resumes against criteria you didn't have to write by hand.
+Sort 1,000 family photos in 10 minutes for $1.30. Extract coding standards from your best code. Screen 500 resumes against criteria you didn't have to write by hand.
 
-Sommelier learns what "good" looks like from your examples, turns that into a reusable taste profile, then applies your judgment at scale. Works with photos, videos, documents, and source code. Supports **Gemini**, **OpenAI**, and **Anthropic** -- just set an API key and go.
+Sommelier learns what "good" looks like from your examples, turns that into a reusable taste profile, then applies your judgment at scale. Works with photos, videos, documents, and source code. Supports **Gemini**, **OpenAI**, and **Anthropic** -- just set an API key and go. Connects to **Claude Desktop** via MCP, so it plugs directly into your existing workflows.
 
 > **Don't know your criteria yet?** Point Sommelier at examples you like and it'll figure it out. The generated profile *is* your documented standards -- and it's executable.
 
@@ -172,10 +172,10 @@ Add to your Claude Desktop config (`claude_desktop_config.json`):
 ```json
 {
   "mcpServers": {
-    "taste-cloner": {
+    "sommelier": {
       "command": "python",
       "args": ["mcp_server.py"],
-      "cwd": "/path/to/taste-cloner"
+      "cwd": "/path/to/sommelier"
     }
   }
 }
@@ -185,18 +185,18 @@ Add to your Claude Desktop config (`claude_desktop_config.json`):
 
 | Tool | Description |
 |------|-------------|
-| `taste_cloner_status` | Check setup status (API keys, providers, profiles) |
-| `taste_cloner_list_profiles` | List all taste profiles |
-| `taste_cloner_get_profile` | Get profile details with human-readable summary |
-| `taste_cloner_create_profile` | Create a new profile with full control |
-| `taste_cloner_update_profile` | Update specific fields of an existing profile |
-| `taste_cloner_delete_profile` | Delete a profile (with confirmation) |
-| `taste_cloner_quick_profile` | AI-generate a profile from a plain English description |
-| `taste_cloner_generate_profile` | AI-generate a profile from example files |
-| `taste_cloner_classify_folder` | Classify all files in a folder (supports batching) |
-| `taste_cloner_classify_files` | Classify specific files by path |
-| `taste_cloner_submit_feedback` | Submit classification corrections |
-| `taste_cloner_view_feedback` | Review all feedback and stats |
+| `sommelier_status` | Check setup status (API keys, providers, profiles) |
+| `sommelier_list_profiles` | List all taste profiles |
+| `sommelier_get_profile` | Get profile details with human-readable summary |
+| `sommelier_create_profile` | Create a new profile with full control |
+| `sommelier_update_profile` | Update specific fields of an existing profile |
+| `sommelier_delete_profile` | Delete a profile (with confirmation) |
+| `sommelier_quick_profile` | AI-generate a profile from a plain English description |
+| `sommelier_generate_profile` | AI-generate a profile from example files |
+| `sommelier_classify_folder` | Classify all files in a folder (supports batching) |
+| `sommelier_classify_files` | Classify specific files by path |
+| `sommelier_submit_feedback` | Submit classification corrections |
+| `sommelier_view_feedback` | Review all feedback and stats |
 
 ---
 
@@ -304,17 +304,17 @@ Use Sommelier to extract best practices from a codebase:
 ```
 # In Claude Desktop (MCP):
 # "Create a code quality profile that sorts Python files into Exemplary, Solid, and Needs-Work"
-# → taste_cloner_quick_profile
+# → sommelier_quick_profile
 
 # Then classify:
 # "Classify all files in my project's src directory"
-# → taste_cloner_classify_folder
+# → sommelier_classify_folder
 ```
 
 **Step 2: Generate best practices.** Feed the "Exemplary" bucket back into profile generation:
 ```
 # "Generate a profile from my exemplary code examples"
-# → taste_cloner_generate_profile with good_examples_folder pointing to Exemplary/
+# → sommelier_generate_profile with good_examples_folder pointing to Exemplary/
 ```
 
 The generated profile **is** your best practices document -- its `top_priorities`, `positive_criteria`, and `philosophy` fields are synthesized from what the AI found in common across your best code. And that profile is then reusable as a classifier for future code reviews.

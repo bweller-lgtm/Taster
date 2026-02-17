@@ -1,4 +1,4 @@
-"""Logging configuration for the LLM Taste Cloner project."""
+"""Logging configuration for the Sommelier project."""
 import logging
 import sys
 from pathlib import Path
@@ -58,7 +58,7 @@ def setup_logging(
         Configured logger instance.
     """
     # Get root logger
-    logger = logging.getLogger("taste_cloner")
+    logger = logging.getLogger("sommelier")
     logger.setLevel(getattr(logging, log_level.upper()))
 
     # Remove existing handlers
@@ -115,8 +115,8 @@ def get_logger(name: str) -> logging.Logger:
         >>> logger.error("Failed to load image: %s", path, exc_info=True)
     """
     # Ensure it's a child of the main logger
-    if not name.startswith("taste_cloner"):
-        name = f"taste_cloner.{name}"
+    if not name.startswith("sommelier"):
+        name = f"sommelier.{name}"
 
     return logging.getLogger(name)
 
@@ -139,7 +139,7 @@ def configure_default_logging(verbose: bool = True) -> logging.Logger:
 
     # Generate timestamped log file
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_file = log_dir / f"taste_cloner_{timestamp}.log"
+    log_file = log_dir / f"sommelier_{timestamp}.log"
 
     return setup_logging(
         log_level=log_level,
@@ -151,23 +151,23 @@ def configure_default_logging(verbose: bool = True) -> logging.Logger:
 # Convenience functions for quick logging without logger instance
 def log_info(message: str, *args, **kwargs):
     """Log an info message."""
-    logger = get_logger("taste_cloner")
+    logger = get_logger("sommelier")
     logger.info(message, *args, **kwargs)
 
 
 def log_warning(message: str, *args, **kwargs):
     """Log a warning message."""
-    logger = get_logger("taste_cloner")
+    logger = get_logger("sommelier")
     logger.warning(message, *args, **kwargs)
 
 
 def log_error(message: str, *args, **kwargs):
     """Log an error message."""
-    logger = get_logger("taste_cloner")
+    logger = get_logger("sommelier")
     logger.error(message, *args, **kwargs)
 
 
 def log_debug(message: str, *args, **kwargs):
     """Log a debug message."""
-    logger = get_logger("taste_cloner")
+    logger = get_logger("sommelier")
     logger.debug(message, *args, **kwargs)

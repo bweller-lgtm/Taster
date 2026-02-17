@@ -1,5 +1,5 @@
-# LLM Taste Cloner Configuration
-# All configurable settings for the photo classification system
+# Sommelier Configuration
+# All configurable settings for the classification system
 
 # ============================= MODEL SETTINGS =====================================
 model:

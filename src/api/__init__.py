@@ -1,4 +1,4 @@
-"""Taste Cloner REST API."""
+"""Sommelier REST API."""
 from .app import create_app
 
 __all__ = ["create_app"]

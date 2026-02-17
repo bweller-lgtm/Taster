@@ -1,2 +1,2 @@
-"""Taste Cloner - Universal AI-powered media classification platform."""
-__version__ = "3.0.0"
+"""Sommelier - Teach AI your taste. Apply it to everything."""
+__version__ = "3.1.0"
