@@ -11,6 +11,7 @@ import sys
 import argparse
 import shutil
 import csv
+import time
 from pathlib import Path
 from collections import defaultdict
 from datetime import datetime
@@ -359,16 +360,19 @@ def main():
     pipeline = MixedPipeline(
         config, profile, cache_manager, gemini_client
     )
+    start_time = time.time()
     result = pipeline.run(
         folder, output_base, config.system.dry_run,
         classify_videos=config.classification.classify_videos
     )
+    result.elapsed_seconds = time.time() - start_time
 
-    # Generate report
+    # Generate reports
     if result.results:
         report_dir = output_dirs.get("Reports", output_base / "Reports")
         report_dir.mkdir(parents=True, exist_ok=True)
         generate_report(result.results, report_dir, config.photo_improvement.enabled)
+        result.generate_summary_report(report_dir, provider_name=gemini_client.provider_name)
 
     # Print summary
     result.print_summary("media files")

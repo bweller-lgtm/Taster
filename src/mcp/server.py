@@ -1174,19 +1174,37 @@ def _handle_classify_folder(pm: ProfileManager, arguments: dict) -> Any:
 
     print(f"[sommelier] Batch complete in {elapsed:.0f}s. {len(results)} classified, {errors} errors. Stats: {stats}", file=sys.stderr, flush=True)
 
+    # Build summary with percentages and top results
+    processed_count = len(results)
+    summary_lines = []
+    if stats:
+        for dest, count in sorted(stats.items(), key=lambda x: -x[1]):
+            pct = (count / processed_count * 100) if processed_count else 0
+            summary_lines.append(f"{dest}: {count} ({pct:.0f}%)")
+    top_confident = sorted(
+        [r for r in results if r.get("confidence") and "error" not in r],
+        key=lambda x: x.get("confidence", 0),
+        reverse=True,
+    )[:5]
+
     return {
         "status": "completed" if not has_more else "partial",
         "dry_run": dry_run,
         "total_files_in_folder": total,
         "batch_offset": offset,
-        "processed": len(results),
+        "processed": processed_count,
         "errors": errors,
         "elapsed_seconds": round(elapsed, 1),
         "has_more": has_more,
         "next_offset": next_offset if has_more else None,
         "stats": stats,
+        "summary": " | ".join(summary_lines) if summary_lines else "",
+        "top_results": [
+            {"name": r["name"], "classification": r["classification"], "confidence": r["confidence"], "reasoning": r.get("reasoning", "")}
+            for r in top_confident
+        ],
         "results": results,
-        "message": f"Processed {len(results)} files in {elapsed:.0f}s." + (f" Call again with offset={next_offset} to continue ({total - next_offset} remaining)." if has_more else ""),
+        "message": f"Processed {processed_count} files in {elapsed:.0f}s." + (f" Call again with offset={next_offset} to continue ({total - next_offset} remaining)." if has_more else ""),
     }
 
 

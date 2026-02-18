@@ -1,0 +1,69 @@
+{
+  "name": "student-essays",
+  "description": "Grade student essays and written assignments by quality",
+  "media_types": ["document"],
+  "categories": [
+    {"name": "Strong", "description": "Excellent work, minimal feedback needed", "color": "#4CAF50"},
+    {"name": "Developing", "description": "Shows promise, needs specific feedback on key areas", "color": "#FF9800"},
+    {"name": "Needs Work", "description": "Significant gaps in argument, evidence, or structure", "color": "#F44336"}
+  ],
+  "default_category": "Developing",
+  "top_priorities": [
+    "Clear thesis or central argument supported by evidence",
+    "Logical structure and coherent progression of ideas",
+    "Genuine engagement with source material (not just summary)",
+    "Writing clarity and precision",
+    "Original thinking beyond restating what others have said"
+  ],
+  "positive_criteria": {
+    "must_have": [
+      "Identifiable thesis or central claim",
+      "Evidence supporting key points",
+      "Basic organizational structure (intro, body, conclusion)"
+    ],
+    "highly_valued": [
+      "Original analysis that goes beyond summarizing sources",
+      "Effective transitions between ideas",
+      "Anticipates and addresses counterarguments",
+      "Specific, concrete examples rather than vague generalities"
+    ],
+    "bonus_points": [
+      "Surprising or creative connections between ideas",
+      "Sophisticated use of evidence from multiple sources",
+      "Writing that is genuinely engaging to read"
+    ]
+  },
+  "negative_criteria": {
+    "deal_breakers": [
+      "Plagiarism or uncited sources",
+      "Off-topic -- does not address the assignment prompt",
+      "No discernible argument or thesis"
+    ],
+    "negative_factors": [
+      "Summary without analysis",
+      "Unsupported claims or opinions stated as fact",
+      "Disorganized structure that's hard to follow",
+      "Frequent grammar or spelling errors that impede comprehension",
+      "Over-reliance on a single source"
+    ]
+  },
+  "specific_guidance": [
+    "A shorter essay with a clear, well-supported argument beats a longer one that rambles.",
+    "Don't penalize unconventional structure if the ideas flow logically.",
+    "Distinguish between surface errors (typos, formatting) and substantive issues (weak argument, missing evidence).",
+    "A Developing essay shows understanding but hasn't pushed into analysis. A Needs Work essay has fundamental gaps."
+  ],
+  "philosophy": "Reward critical thinking and clear communication over polish. A rough essay with genuine insight outranks a polished essay that says nothing new.",
+  "thresholds": {
+    "Strong": 0.70,
+    "Developing": 0.40
+  },
+  "photo_settings": null,
+  "document_settings": {
+    "enable_text_extraction": true,
+    "max_pages": 20
+  },
+  "created_at": "2026-02-17T00:00:00",
+  "updated_at": "2026-02-17T00:00:00",
+  "version": 1
+}
