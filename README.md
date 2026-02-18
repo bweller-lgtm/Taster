@@ -2,11 +2,9 @@
 
 **Teach AI your taste. Apply it to everything.**
 
-Sort 1,000 family photos in 10 minutes for $1.30. Extract coding standards from your best code. Grade 200 student essays against criteria you didn't have to write by hand.
+You know quality when you see it -- but writing down *why* is the hard part. Sommelier figures it out for you. Show it examples you like and it reverse-engineers your standards into a reusable profile: a human-readable style guide that doubles as an executable classifier.
 
-### You don't need to know your criteria.
-
-Point Sommelier at examples you like and it figures out what they have in common, then applies your judgment at scale. The generated profile is both a human-readable style guide and an executable classifier -- your documented standards, synthesized from examples. This is what makes it different from a one-shot prompt: your taste compounds over time.
+Sort 1,000 family photos in 10 minutes for $1.30. Extract coding standards from your best files. Grade 200 essays against criteria you never had to write by hand. Every run sharpens the profile. Your taste compounds.
 
 ---
 
@@ -356,25 +354,10 @@ MyFolder_sorted/
 ├── Storage/                     # Keep but don't share
 ├── Review/                      # Needs manual review
 ├── Ignore/                      # Not relevant
-├── ImprovementCandidates/       # Gray zone photos (if enabled)
-│   └── improvement_candidates.csv
-├── Improved/                    # AI-enhanced photos
-└── Reports/                     # Classification logs (CSV)
+└── Reports/                     # Classification logs + summary
 ```
 
 For custom profiles, output folders match the profile's category names (e.g., `Strong/`, `Maybe/`, `Pass/`).
-
----
-
-## Photo Improvement (Gray Zone)
-
-Detects meaningful family moments with technical issues (blur, noise, bad exposure) and uses Gemini AI to enhance them.
-
-1. **During classification** -- Gray zone photos are copied to `ImprovementCandidates/`
-2. **Review** -- Approve candidates via Gradio UI or CSV editing
-3. **Improve** -- `py -3.12 improve_photos.py "path/to/sorted_folder"`
-
-Cost: ~$0.134 per image (Gemini 3 Pro) or ~$0.039 (Flash). Originals are always preserved.
 
 ---
 
@@ -417,8 +400,7 @@ src/
 ├── pipelines/             # Photo, document, and mixed orchestration
 ├── api/                   # REST API (FastAPI)
 ├── training/              # Pairwise training & profile synthesis
-├── mcp/                   # MCP server (Claude Desktop)
-└── improvement/           # Photo improvement (gray zone)
+└── mcp/                   # MCP server (Claude Desktop)
 ```
 
 | Entry Point | Purpose |
@@ -426,7 +408,6 @@ src/
 | `mcp_server.py` | MCP server for Claude Desktop |
 | `taste_classify.py` | CLI classification |
 | `serve.py` | REST API server |
-| `improve_photos.py` | Photo improvement |
 
 </details>
 

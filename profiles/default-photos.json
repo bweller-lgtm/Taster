@@ -61,7 +61,6 @@
   "photo_settings": {
     "enable_burst_detection": true,
     "enable_face_detection": true,
-    "enable_improvement": true,
     "contains_children_check": true,
     "appropriateness_check": true
   },

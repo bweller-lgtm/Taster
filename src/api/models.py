@@ -19,7 +19,6 @@ class PhotoProfileSettingsModel(BaseModel):
     """Photo/video-specific settings."""
     enable_burst_detection: bool = True
     enable_face_detection: bool = True
-    enable_improvement: bool = False
     contains_children_check: bool = True
     appropriateness_check: bool = True
 

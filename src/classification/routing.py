@@ -3,7 +3,7 @@ import numpy as np
 from pathlib import Path
 from typing import Dict, List, Tuple, Any, Optional
 
-from ..core.config import Config, ClassificationConfig, PhotoImprovementConfig
+from ..core.config import Config, ClassificationConfig
 from ..core.ai_client import AIClient
 from ..core.file_utils import ImageUtils
 from ..core.profiles import TasteProfile
@@ -38,45 +38,6 @@ class Router:
         self.client = gemini_client
         self.profile = profile
 
-    def should_route_to_improvement(self, classification: Dict[str, Any]) -> bool:
-        """
-        Check if a photo should be routed to ImprovementCandidates.
-
-        A photo is an improvement candidate if:
-        1. Photo improvement is enabled
-        2. improvement_candidate flag is True
-        3. contextual_value meets threshold
-        4. Has at least min_issues_for_candidate improvement reasons
-
-        Args:
-            classification: Classification result dict.
-
-        Returns:
-            True if should route to ImprovementCandidates.
-        """
-        if not self.config.photo_improvement.enabled:
-            return False
-
-        # Check improvement_candidate flag
-        if not classification.get("improvement_candidate", False):
-            return False
-
-        # Check contextual value meets threshold
-        contextual_value = classification.get("contextual_value", "low")
-        threshold = self.config.photo_improvement.contextual_value_threshold
-
-        if threshold == "high" and contextual_value != "high":
-            return False
-        if threshold == "medium" and contextual_value not in ["high", "medium"]:
-            return False
-
-        # Check minimum issues
-        improvement_reasons = classification.get("improvement_reasons", [])
-        if len(improvement_reasons) < self.config.photo_improvement.min_issues_for_candidate:
-            return False
-
-        return True
-
     def route_singleton(self, classification: Dict[str, Any]) -> str:
         """
         Route a singleton photo based on classification.
@@ -85,7 +46,7 @@ class Router:
             classification: Classification result dict.
 
         Returns:
-            Destination folder: "Share", "Storage", "Review", "Ignore", or "ImprovementCandidates".
+            Destination folder: "Share", "Storage", "Review", or "Ignore".
         """
         # Extract fields
         category = classification.get("classification", "Review")
@@ -104,11 +65,6 @@ class Router:
         # If inappropriate content
         if is_appropriate == False:
             return "Review"  # Route to Review for manual inspection
-
-        # Check for improvement candidate BEFORE normal routing
-        # Improvement candidates are photos with high contextual value but technical issues
-        if self.should_route_to_improvement(classification):
-            return "ImprovementCandidates"
 
         # Apply thresholds
         if category == "Share" and confidence >= self.config.classification.share_threshold:
@@ -175,11 +131,6 @@ class Router:
             # If inappropriate
             if is_appropriate == False:
                 destinations.append("Review")
-                continue
-
-            # Check for improvement candidate BEFORE normal routing
-            if self.should_route_to_improvement(classification):
-                destinations.append("ImprovementCandidates")
                 continue
 
             # Burst-aware routing
