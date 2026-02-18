@@ -1,0 +1,66 @@
+{
+  "name": "code-review",
+  "description": "Classify source code files by quality and adherence to best practices",
+  "media_types": ["code"],
+  "categories": [
+    {"name": "Exemplary", "description": "Well-structured, clear, follows best practices consistently", "color": "#4CAF50"},
+    {"name": "Solid", "description": "Functional and readable, minor improvements possible", "color": "#2196F3"},
+    {"name": "Needs Work", "description": "Significant issues with clarity, structure, or correctness", "color": "#FF9800"}
+  ],
+  "default_category": "Solid",
+  "top_priorities": [
+    "Clear naming and self-documenting code",
+    "Consistent error handling patterns",
+    "Single responsibility - functions and classes do one thing well",
+    "Appropriate abstraction level (not over- or under-engineered)",
+    "Testability and separation of concerns"
+  ],
+  "positive_criteria": {
+    "must_have": [
+      "Readable without extensive comments",
+      "Consistent style and formatting",
+      "No obvious bugs or logic errors"
+    ],
+    "highly_valued": [
+      "Meaningful variable and function names",
+      "Clean control flow without deep nesting",
+      "Proper use of language idioms and standard library",
+      "Edge cases handled appropriately"
+    ],
+    "bonus_points": [
+      "Elegant solutions to complex problems",
+      "Well-chosen abstractions that simplify the codebase",
+      "Clear separation of pure logic from side effects"
+    ]
+  },
+  "negative_criteria": {
+    "deal_breakers": [
+      "Security vulnerabilities (SQL injection, XSS, command injection)",
+      "Hardcoded secrets or credentials",
+      "Race conditions or unsafe concurrent access"
+    ],
+    "negative_factors": [
+      "God functions or classes doing too many things",
+      "Magic numbers and unexplained constants",
+      "Copy-pasted code that should be abstracted",
+      "Deeply nested conditionals",
+      "Misleading names or stale comments"
+    ]
+  },
+  "specific_guidance": [
+    "Judge code by how easy it is for a new team member to understand.",
+    "Prefer simple, boring code over clever code -- unless cleverness is clearly justified.",
+    "A file can be Exemplary even if it's short and simple, as long as it's done well.",
+    "Over-engineering (unnecessary abstractions, premature optimization) is a negative factor, not a positive one."
+  ],
+  "philosophy": "Good code is code that's easy to read, easy to change, and hard to break.",
+  "thresholds": {
+    "Exemplary": 0.70,
+    "Solid": 0.40
+  },
+  "photo_settings": null,
+  "document_settings": null,
+  "created_at": "2026-02-17T00:00:00",
+  "updated_at": "2026-02-17T00:00:00",
+  "version": 1
+}

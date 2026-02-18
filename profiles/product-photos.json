@@ -1,0 +1,72 @@
+{
+  "name": "product-photos",
+  "description": "Sort product photography by e-commerce readiness",
+  "media_types": ["image"],
+  "categories": [
+    {"name": "Hero", "description": "Lead image quality -- clean, compelling, ready for listing", "color": "#4CAF50"},
+    {"name": "Usable", "description": "Good enough for gallery or secondary placement", "color": "#2196F3"},
+    {"name": "Reject", "description": "Not suitable for customer-facing use", "color": "#F44336"}
+  ],
+  "default_category": "Usable",
+  "top_priorities": [
+    "Product is the clear focal point, filling the frame appropriately",
+    "Accurate color representation under neutral or white lighting",
+    "Sharp focus on the product with clean background",
+    "Professional composition that would look right on a product page",
+    "Shows the product as a customer would want to see it"
+  ],
+  "positive_criteria": {
+    "must_have": [
+      "Product is in sharp focus",
+      "Adequate lighting -- no harsh shadows obscuring product details",
+      "Product is clearly identifiable and not cropped awkwardly"
+    ],
+    "highly_valued": [
+      "Clean, uncluttered background (white, gradient, or contextual lifestyle)",
+      "Multiple angles or detail shots showing key features",
+      "Consistent style that would look cohesive in a product gallery",
+      "Natural color balance -- product looks like it does in person"
+    ],
+    "bonus_points": [
+      "Lifestyle context that helps the customer imagine owning the product",
+      "Scale reference (hand, common object) for size context",
+      "Catches the eye -- would stop someone mid-scroll"
+    ]
+  },
+  "negative_criteria": {
+    "deal_breakers": [
+      "Product out of focus or motion-blurred",
+      "Color cast that misrepresents the product (yellow lighting, blue tint)",
+      "Watermarks, logos, or text overlays from other sources"
+    ],
+    "negative_factors": [
+      "Cluttered background competing with the product for attention",
+      "Harsh shadows or blown-out highlights hiding product details",
+      "Awkward angle that doesn't show the product well",
+      "Dust, fingerprints, or imperfections visible on product",
+      "Too much negative space -- product is small in a large frame"
+    ]
+  },
+  "specific_guidance": [
+    "A clean shot on a white background with good lighting is almost always Hero material.",
+    "Lifestyle shots can be Hero if the product is still the clear star -- not lost in the scene.",
+    "Reject anything a customer would find misleading about the product's actual appearance.",
+    "Consistency matters: if you're building a gallery, similar style across shots is more important than any single shot being perfect."
+  ],
+  "philosophy": "The customer should see exactly what they're getting. Hero shots sell; Usable shots inform; Rejects confuse or mislead.",
+  "thresholds": {
+    "Hero": 0.70,
+    "Usable": 0.40
+  },
+  "photo_settings": {
+    "enable_burst_detection": false,
+    "enable_face_detection": false,
+    "enable_improvement": false,
+    "contains_children_check": false,
+    "appropriateness_check": false
+  },
+  "document_settings": null,
+  "created_at": "2026-02-17T00:00:00",
+  "updated_at": "2026-02-17T00:00:00",
+  "version": 1
+}
