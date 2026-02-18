@@ -50,3 +50,4 @@ training_data/
 *.log
 *.pkl
 *.json.bak
+.coverage
