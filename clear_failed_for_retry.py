@@ -232,7 +232,6 @@ def main():
             output_folder / "Storage",
             output_folder / "Review",
             output_folder / "Ignore",
-            output_folder / "ImprovementCandidates",
         ]
 
         by_folder = defaultdict(list)
@@ -306,7 +305,6 @@ def main():
         output_folder / "Storage",
         output_folder / "Review",
         output_folder / "Ignore",
-        output_folder / "ImprovementCandidates",
     ]
 
     files_removed = 0

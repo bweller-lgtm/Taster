@@ -236,31 +236,6 @@ class ProfileConfig:
 
 
 @dataclass
-class PhotoImprovementConfig:
-    """Photo improvement configuration for gray zone photos."""
-    enabled: bool = True
-    contextual_value_threshold: str = "high"  # "high" or "medium"
-    min_issues_for_candidate: int = 1
-    cost_per_image: float = 0.134  # Gemini 3 Pro Image pricing
-    parallel_workers: int = 5
-    max_retries: int = 2
-    model_name: str = "gemini-3-pro-image-preview"
-    max_output_tokens: int = 8192  # High token limit for image generation
-    review_after_sort: bool = True  # Prompt to review candidates after sorting
-
-    def __post_init__(self):
-        """Validate parameters."""
-        if self.contextual_value_threshold not in ["high", "medium"]:
-            raise ValueError(f"contextual_value_threshold must be 'high' or 'medium', got {self.contextual_value_threshold}")
-        if self.min_issues_for_candidate < 1:
-            raise ValueError(f"min_issues_for_candidate must be >= 1, got {self.min_issues_for_candidate}")
-        if self.cost_per_image < 0:
-            raise ValueError(f"cost_per_image must be >= 0, got {self.cost_per_image}")
-        if self.parallel_workers < 1:
-            raise ValueError(f"parallel_workers must be >= 1, got {self.parallel_workers}")
-
-
-@dataclass
 class Config:
     """Master configuration object."""
     model: ModelConfig = field(default_factory=ModelConfig)
@@ -276,7 +251,6 @@ class Config:
     system: SystemConfig = field(default_factory=SystemConfig)
     document: DocumentConfig = field(default_factory=DocumentConfig)
     profiles: ProfileConfig = field(default_factory=ProfileConfig)
-    photo_improvement: PhotoImprovementConfig = field(default_factory=PhotoImprovementConfig)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Config":
@@ -295,7 +269,6 @@ class Config:
             system=SystemConfig(**data.get("system", {})),
             document=DocumentConfig(**data.get("document", {})),
             profiles=ProfileConfig(**data.get("profiles", {})),
-            photo_improvement=PhotoImprovementConfig(**data.get("photo_improvement", {})),
         )
 
 
@@ -361,7 +334,6 @@ def save_config(config: Config, config_path: Path):
         "system": asdict(config.system),
         "document": asdict(config.document),
         "profiles": asdict(config.profiles),
-        "photo_improvement": asdict(config.photo_improvement),
     }
 
     # Convert Path objects and sets to YAML-serializable formats
