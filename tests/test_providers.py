@@ -392,3 +392,116 @@ class TestModelConfigCompat:
         })
         assert config.model.provider == "openai"
         assert config.model.openai_model == "gpt-4o"
+
+
+# ── Additional ImageEncoder tests ────────────────────────────────────
+
+
+class TestImageEncoderExtended:
+
+    def test_image_to_bytes(self):
+        from PIL import Image
+        img = Image.new("RGB", (100, 100), "green")
+        data = ImageEncoder.image_to_bytes(img)
+        assert isinstance(data, bytes)
+        assert len(data) > 0
+
+    def test_image_to_bytes_rgba(self):
+        from PIL import Image
+        img = Image.new("RGBA", (100, 100), (255, 0, 0, 128))
+        data = ImageEncoder.image_to_bytes(img)
+        assert isinstance(data, bytes)
+
+    def test_to_base64_palette_mode(self):
+        from PIL import Image
+        img = Image.new("P", (100, 100))
+        b64 = ImageEncoder.to_base64(img)
+        assert isinstance(b64, str)
+
+    def test_resize_preserves_aspect(self):
+        from PIL import Image
+        import base64
+        import io
+        img = Image.new("RGB", (4000, 2000), "blue")
+        b64 = ImageEncoder.to_base64(img, max_size=256)
+        decoded = base64.b64decode(b64)
+        result = Image.open(io.BytesIO(decoded))
+        assert max(result.size) <= 256
+
+    def test_media_type_webp(self):
+        assert ImageEncoder.media_type_for("WEBP") == "image/webp"
+
+
+# ── Anthropic PDF/path conversion ────────────────────────────────────
+
+
+class TestAnthropicPathConversion:
+
+    @pytest.fixture
+    def provider(self):
+        env = dict(os.environ)
+        env["ANTHROPIC_API_KEY"] = "test-key"
+        with patch.dict(os.environ, env):
+            mock_anthropic = MagicMock()
+            with patch.dict("sys.modules", {"anthropic": mock_anthropic}):
+                from src.core.providers.anthropic_provider import AnthropicProvider
+                return AnthropicProvider(api_key="test-key")
+
+    def test_pdf_native_support(self, provider, tmp_path):
+        """Anthropic should send PDFs as native document blocks."""
+        pdf = tmp_path / "test.pdf"
+        pdf.write_bytes(b"%PDF-1.4 fake")
+        blocks = provider._convert_path(pdf)
+        assert len(blocks) == 1
+        assert blocks[0]["type"] == "document"
+        assert blocks[0]["source"]["media_type"] == "application/pdf"
+
+    def test_unknown_file_type(self, provider, tmp_path):
+        unknown = tmp_path / "readme.xyz"
+        unknown.write_text("hello")
+        blocks = provider._convert_path(unknown)
+        assert blocks[0]["type"] == "text"
+        assert "readme.xyz" in blocks[0]["text"]
+
+
+# ── OpenAI path conversion ──────────────────────────────────────────
+
+
+class TestOpenAIPathConversion:
+
+    @pytest.fixture
+    def provider(self):
+        env = dict(os.environ)
+        env["OPENAI_API_KEY"] = "test-key"
+        with patch.dict(os.environ, env):
+            mock_openai = MagicMock()
+            with patch.dict("sys.modules", {"openai": mock_openai}):
+                from src.core.providers.openai_provider import OpenAIProvider
+                return OpenAIProvider(api_key="test-key")
+
+    def test_unknown_file_type(self, provider, tmp_path):
+        unknown = tmp_path / "readme.xyz"
+        unknown.write_text("hello")
+        parts = provider._convert_path(unknown)
+        assert parts[0]["type"] == "text"
+        assert "readme.xyz" in parts[0]["text"]
+
+
+# ── VideoFrameExtractor edge cases ──────────────────────────────────
+
+
+class TestVideoFrameExtractorExtended:
+
+    def test_nonexistent_file(self, tmp_path):
+        result = VideoFrameExtractor.extract_frames(tmp_path / "nonexistent.mp4")
+        assert isinstance(result, list)
+
+
+# ── PDFPageRenderer edge cases ───────────────────────────────────────
+
+
+class TestPDFPageRendererExtended:
+
+    def test_nonexistent_pdf(self, tmp_path):
+        with pytest.raises(Exception):  # pymupdf raises its own FileNotFoundError (RuntimeError subclass)
+            PDFPageRenderer.render_pages(tmp_path / "nonexistent.pdf")

@@ -24,7 +24,6 @@ class PhotoProfileSettings:
     """Photo/video-specific profile settings."""
     enable_burst_detection: bool = True
     enable_face_detection: bool = True
-    enable_improvement: bool = False
     contains_children_check: bool = True
     appropriateness_check: bool = True
 
@@ -301,7 +300,7 @@ class ProfileManager:
             photo_settings=PhotoProfileSettings(
                 enable_burst_detection=True,
                 enable_face_detection=True,
-                enable_improvement=True,
+
                 contains_children_check=True,
                 appropriateness_check=True,
             ),
@@ -413,7 +412,7 @@ class ProfileManager:
             photo_settings=PhotoProfileSettings(
                 enable_burst_detection=True,
                 enable_face_detection=True,
-                enable_improvement=True,
+
                 contains_children_check=True,
                 appropriateness_check=True,
             ),
