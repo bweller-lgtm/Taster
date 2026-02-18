@@ -1,0 +1,82 @@
+{
+  "name": "vacation-social-media",
+  "description": "Identifies the most impactful vacation photos for social media by prioritizing unique storytelling and genuine human connection over technical perfection.",
+  "media_types": [
+    "image"
+  ],
+  "categories": [
+    {
+      "name": "Post",
+      "description": "The 'hero' shots: visually stunning, story-driven images with a 'wow' factor that would stop a scroll and command engagement.",
+      "color": null
+    },
+    {
+      "name": "Stories",
+      "description": "Engaging but casual shots: fun behind-the-scenes moments and candid vibes that work well for ephemeral sharing or reels.",
+      "color": null
+    },
+    {
+      "name": "Keep",
+      "description": "Personal memories: decent quality photos that hold sentimental value for a private collection but lack the impact for public sharing.",
+      "color": null
+    },
+    {
+      "name": "Skip",
+      "description": "Low-value files: blurry, unflattering, technical failures, or redundant duplicates that should be discarded.",
+      "color": null
+    }
+  ],
+  "default_category": "Keep",
+  "top_priorities": [
+    "Unique moments and storytelling narrative",
+    "Genuine human emotion and candid expressions",
+    "Strong visual composition and scenery",
+    "Base-level technical viability"
+  ],
+  "positive_criteria": {
+    "must_have": [
+      "Subject matter that tells a specific story of an experience",
+      "Visible and genuine facial expressions or body language",
+      "Clear subject identification"
+    ],
+    "highly_valued": [
+      "Unexpected or 'one-of-a-kind' moments",
+      "Candid laughter and authentic connection between people",
+      "Golden hour or dramatic natural lighting",
+      "Interesting/unique perspective angles"
+    ],
+    "bonus_points": [
+      "Symmetry or strong leading lines",
+      "Vibrant colors that pop",
+      "Everyone in a group shot looking their best simultaneously"
+    ]
+  },
+  "negative_criteria": {
+    "deal_breakers": [
+      "Extremely blurry or missed focus",
+      "Eyes closed in group photos",
+      "Severe overexposure or underexposure where detail is lost",
+      "Near-identical duplicates (keep only the best frame)",
+      "Utilitarian photos like receipts, menus, or maps without artistic intent"
+    ],
+    "negative_factors": [
+      "Stiff or forced 'cheese' posing",
+      "Distracting background elements",
+      "Flat, uninteresting lighting",
+      "Cliché or generic compositions that feel 'stock'"
+    ]
+  },
+  "specific_guidance": [
+    "A compelling story or unique moment always trumps technical perfection; prioritize the 'wow' over the sharpness.",
+    "When evaluating 'Post' vs 'Stories', ask if the image stands alone as a piece of art or requires context.",
+    "Filter out all but the single best shot from any series of similar photos to reduce clutter.",
+    "Favor images where the subjects are interacting with each other or the environment rather than looking directly at the lens."
+  ],
+  "philosophy": "Prioritize authentic storytelling and 'wow' moments over technical perfection to curate a feed that feels both spectacular and genuine.",
+  "thresholds": {},
+  "photo_settings": null,
+  "document_settings": null,
+  "created_at": "2026-02-17T11:22:05.178505",
+  "updated_at": "2026-02-17T11:22:05.178505",
+  "version": 1
+}
