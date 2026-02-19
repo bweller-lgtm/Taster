@@ -19,6 +19,12 @@ class FileTypeRegistry:
         ".3gp", ".wmv", ".flv", ".webm"
     }
 
+    # Supported audio extensions
+    AUDIO_EXTENSIONS = {
+        ".mp3", ".wav", ".flac", ".aac", ".ogg",
+        ".m4a", ".wma", ".opus", ".aiff"
+    }
+
     # Supported document extensions
     DOCUMENT_EXTENSIONS = {
         ".pdf", ".docx", ".xlsx", ".pptx",
@@ -64,6 +70,11 @@ class FileTypeRegistry:
         return path.suffix.lower() in cls.VIDEO_EXTENSIONS
 
     @classmethod
+    def is_audio(cls, path: Path) -> bool:
+        """Check if file is an audio file."""
+        return path.suffix.lower() in cls.AUDIO_EXTENSIONS
+
+    @classmethod
     def is_code(cls, path: Path) -> bool:
         """Check if file is a code/config file."""
         return path.suffix.lower() in cls.CODE_EXTENSIONS
@@ -85,7 +96,7 @@ class FileTypeRegistry:
         Returns:
             True if media, False otherwise.
         """
-        return cls.is_image(path) or cls.is_video(path)
+        return cls.is_image(path) or cls.is_video(path) or cls.is_audio(path)
 
     @classmethod
     def list_images(cls, directory: Path, recursive: bool = False) -> List[Path]:
@@ -154,6 +165,35 @@ class FileTypeRegistry:
         return sorted(videos)
 
     @classmethod
+    def list_audio(cls, directory: Path, recursive: bool = False) -> List[Path]:
+        """
+        List all audio files in directory.
+
+        Args:
+            directory: Directory to search.
+            recursive: Search recursively.
+
+        Returns:
+            List of audio paths.
+        """
+        directory = Path(directory)
+
+        if not directory.exists():
+            raise FileNotFoundError(f"Directory not found: {directory}")
+
+        if not directory.is_dir():
+            raise NotADirectoryError(f"Path is not a directory: {directory}")
+
+        pattern = "**/*" if recursive else "*"
+
+        audio = []
+        for path in directory.glob(pattern):
+            if path.is_file() and cls.is_audio(path):
+                audio.append(path)
+
+        return sorted(audio)
+
+    @classmethod
     def list_documents(cls, directory: Path, recursive: bool = False) -> List[Path]:
         """
         List all documents in directory.
@@ -201,23 +241,25 @@ class FileTypeRegistry:
         return {
             "images": cls.list_images(directory, recursive),
             "videos": cls.list_videos(directory, recursive),
+            "audio": cls.list_audio(directory, recursive),
         }
 
     @classmethod
     def list_all_media(cls, directory: Path, recursive: bool = False) -> Dict[str, List[Path]]:
         """
-        List all media files including documents in directory.
+        List all media files including documents and audio in directory.
 
         Args:
             directory: Directory to search.
             recursive: Search recursively.
 
         Returns:
-            Dictionary with 'images', 'videos', and 'documents' keys.
+            Dictionary with 'images', 'videos', 'audio', and 'documents' keys.
         """
         return {
             "images": cls.list_images(directory, recursive),
             "videos": cls.list_videos(directory, recursive),
+            "audio": cls.list_audio(directory, recursive),
             "documents": cls.list_documents(directory, recursive),
         }
 
@@ -235,12 +277,16 @@ class FileTypeRegistry:
         """
         media = cls.list_all_media(directory, recursive)
         has_images = len(media["images"]) > 0 or len(media["videos"]) > 0
+        has_audio = len(media.get("audio", [])) > 0
         has_documents = len(media["documents"]) > 0
 
-        if has_images and has_documents:
+        type_count = sum([has_images, has_audio, has_documents])
+        if type_count > 1:
             return "mixed"
         elif has_documents:
             return "document"
+        elif has_audio:
+            return "audio"
         elif len(media["videos"]) > 0 and len(media["images"]) == 0:
             return "video"
         else:
