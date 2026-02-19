@@ -1,5 +1,6 @@
 """Unified prompt builder for singletons, bursts, videos, and documents."""
 import json
+import re
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
@@ -130,10 +131,64 @@ class PromptBuilder:
         # Legacy: always check for photos
         return self._is_photo_profile
 
+    # ---- Dimension helpers ----
+
+    def _get_dimensions(self) -> List[Dict[str, str]]:
+        """Return dimension definitions from profile or auto-derive from top_priorities."""
+        if self.profile and self.profile.dimensions:
+            return self.profile.dimensions
+
+        # Auto-derive from top_priorities
+        priorities = []
+        if self.profile:
+            priorities = self.profile.top_priorities
+        elif self.taste_profile_data:
+            priorities = self.taste_profile_data.get("top_priorities", [])
+
+        if not priorities:
+            return []
+
+        dims = []
+        for p in priorities[:7]:
+            # Clean: strip possessives, remove parentheses chars
+            clean = re.sub(r"'s\b", "", p.lower())
+            clean = re.sub(r"[()]", "", clean)
+            # Sanitize to snake_case, truncate at word boundary
+            name = re.sub(r"[^a-z0-9]+", "_", clean).strip("_")
+            if len(name) > 40:
+                name = name[:40].rsplit("_", 1)[0]
+            if name:
+                dims.append({"name": name, "description": p})
+        return dims
+
+    def _build_dimensions_section(self) -> str:
+        """Build the prompt section asking the LLM to score each dimension 1-5."""
+        dims = self._get_dimensions()
+        if not dims:
+            return ""
+
+        lines = ["\n**DIMENSION SCORING:**",
+                 "Score each dimension 1-5 alongside your holistic score:"]
+        for d in dims:
+            lines.append(f"- **{d['name']}**: {d['description']}")
+        return "\n".join(lines)
+
+    def _build_dimensions_json_fragment(self) -> str:
+        """Build the 'dimensions' key for the JSON output format."""
+        dims = self._get_dimensions()
+        if not dims:
+            return ""
+
+        inner = ", ".join(f'"{d["name"]}": 1-5' for d in dims)
+        return f',\n    "dimensions": {{{inner}}}'
+
     # ---- Taste section builders ----
 
     def _build_taste_section(self, mode: str = "singleton") -> str:
-        """Build taste profile section."""
+        """Build taste profile section.
+
+        Supported modes: singleton, burst, video, document, audio.
+        """
         if not self.taste_profile_data:
             return self._build_fallback_taste_section(mode)
 
@@ -196,6 +251,25 @@ class PromptBuilder:
                 taste_note += f"**Highly Valued:** {', '.join(share_criteria['highly_valued'][:3])}\n"
             if reject_criteria.get("deal_breakers"):
                 taste_note += f"**Deal Breakers:** {', '.join(reject_criteria['deal_breakers'][:3])}\n"
+
+        elif mode == "audio":
+            taste_note = "\n**AUDIO EVALUATION CRITERIA:**\n"
+            taste_note += f"Philosophy: {self.taste_profile_data.get('share_philosophy', '')}\n\n"
+            if top_priorities:
+                taste_note += "**Priorities (adapted for audio):**\n"
+                for i, p in enumerate(top_priorities[:5], 1):
+                    taste_note += f"{i}. {p}\n"
+                taste_note += "\n"
+            if share_criteria.get("must_have"):
+                taste_note += f"**Must Have:** {', '.join(share_criteria['must_have'][:3])}\n"
+            if share_criteria.get("highly_valued"):
+                taste_note += f"**Highly Valued:** {', '.join(share_criteria['highly_valued'][:3])}\n"
+            if reject_criteria.get("deal_breakers"):
+                taste_note += f"**Deal Breakers:** {', '.join(reject_criteria['deal_breakers'][:3])}\n"
+            taste_note += "\n**AUDIO-SPECIFIC CONSIDERATIONS:**\n"
+            taste_note += "- Audio clarity: clear speech, music quality, minimal background noise\n"
+            taste_note += "- Content value: meaningful content, emotional impact, information density\n"
+            taste_note += "- Production quality: volume levels, editing, pacing\n"
 
         return taste_note
 
@@ -305,6 +379,8 @@ class PromptBuilder:
             return self.build_video_prompt()
         elif media_type == "document":
             return self._build_document_singleton_prompt()
+        elif media_type == "audio":
+            return self.build_audio_prompt()
         return self._build_image_singleton_prompt()
 
     def build_group_prompt(self, group_size: int, media_type: str = "image") -> str:
@@ -320,6 +396,8 @@ class PromptBuilder:
         taste_section = self._build_taste_section("singleton")
         appropriateness_section = self._build_appropriateness_section()
         calibration_section = self._build_calibration_section()
+        dimensions_section = self._build_dimensions_section()
+        dimensions_json = self._build_dimensions_json_fragment()
 
         # Dynamic category names
         cat_names = self._category_names
@@ -332,7 +410,7 @@ class PromptBuilder:
     "score": 1 to 5,
     "reasoning": "Brief explanation (1 sentence max)",
     "contains_children": true or false,
-    "is_appropriate": true or false
+    "is_appropriate": true or false{dimensions_json}
 }}"""
 
         prompt = f"""You are helping sort family photos of young children into categories: {', '.join(cat_names)}.
@@ -345,6 +423,7 @@ class PromptBuilder:
 {self._build_category_format()}
 
 {scoring_rubric}
+{dimensions_section}
 
 {calibration_section}
 
@@ -381,6 +460,8 @@ Analyze this photo and respond with CONCISE JSON:
         taste_section = self._build_taste_section("burst")
         appropriateness_section = self._build_appropriateness_section()
         calibration_section = self._build_calibration_section()
+        dimensions_section = self._build_dimensions_section()
+        dimensions_json = self._build_dimensions_json_fragment()
 
         cat_names = self._category_names
         cat_str = " or ".join([f'"{c}"' for c in cat_names])
@@ -394,7 +475,7 @@ Analyze this photo and respond with CONCISE JSON:
     "score": 1 to 5,
     "reasoning": "Why this rank? (1 sentence)",
     "contains_children": true or false,
-    "is_appropriate": true or false
+    "is_appropriate": true or false{dimensions_json}
   }},
   ...
 ]"""
@@ -430,6 +511,7 @@ These are very similar - slight variations of the same moment.
 - **Absolute quality**: Share-worthiness independent of burst (score 1-5)
 
 {scoring_rubric}
+{dimensions_section}
 
 **CRITICAL - BE SELECTIVE:**
 - NOT every burst deserves a share
@@ -455,6 +537,8 @@ Respond with JSON array (one entry per photo, SAME ORDER as shown):
             "this contain", "this video contain"
         )
         calibration_section = self._build_calibration_section()
+        dimensions_section = self._build_dimensions_section()
+        dimensions_json = self._build_dimensions_json_fragment()
 
         cat_names = self._category_names
         cat_str = " or ".join([f'"{c}"' for c in cat_names])
@@ -473,6 +557,7 @@ Respond with JSON array (one entry per photo, SAME ORDER as shown):
 {self._build_category_format()}
 
 {scoring_rubric}
+{dimensions_section}
 
 {calibration_section}
 
@@ -484,7 +569,42 @@ Watch this video and respond with CONCISE JSON:
     "contains_children": true or false,
     "is_appropriate": true or false,
     "audio_quality": "good" or "poor" or "silent",
-    "highlights": "Key moments if Share-worthy (optional)"
+    "highlights": "Key moments if Share-worthy (optional)"{dimensions_json}
+}}"""
+
+        return prompt
+
+    def build_audio_prompt(self) -> str:
+        """Build prompt for evaluating an audio file."""
+        taste_section = self._build_taste_section("audio")
+        calibration_section = self._build_calibration_section()
+        dimensions_section = self._build_dimensions_section()
+        dimensions_json = self._build_dimensions_json_fragment()
+
+        cat_names = self._category_names
+        cat_str = " or ".join([f'"{c}"' for c in cat_names])
+
+        scoring_rubric = self._build_scoring_rubric()
+
+        prompt = f"""You are helping classify audio files into categories: {', '.join(cat_names)}.
+
+**AUDIO EVALUATION - Listen to the entire audio carefully**
+{taste_section}
+
+{self._build_category_format()}
+
+{scoring_rubric}
+{dimensions_section}
+
+{calibration_section}
+
+Listen to this audio and respond with CONCISE JSON:
+{{
+    "classification": {cat_str},
+    "score": 1 to 5,
+    "reasoning": "Brief explanation (1-2 sentences max)",
+    "audio_quality": "good" or "poor" or "silent",
+    "content_summary": "2-3 sentence summary of the audio content"{dimensions_json}
 }}"""
 
         return prompt
@@ -492,6 +612,8 @@ Watch this video and respond with CONCISE JSON:
     def _build_document_singleton_prompt(self) -> str:
         """Build prompt for evaluating a single document."""
         taste_section = self._build_taste_section("document")
+        dimensions_section = self._build_dimensions_section()
+        dimensions_json = self._build_dimensions_json_fragment()
         cat_names = self._category_names
         cat_str = " or ".join([f'"{c}"' for c in cat_names])
 
@@ -503,6 +625,7 @@ Watch this video and respond with CONCISE JSON:
 {self._build_category_format()}
 
 {scoring_rubric}
+{dimensions_section}
 
 Evaluate this document based on the criteria above.
 Consider content quality, relevance, completeness, and presentation.
@@ -513,7 +636,7 @@ Respond with CONCISE JSON:
     "score": 1 to 5,
     "reasoning": "Brief explanation (1-2 sentences max)",
     "content_summary": "2-3 sentence summary of the document content",
-    "key_topics": ["topic1", "topic2", "topic3"]
+    "key_topics": ["topic1", "topic2", "topic3"]{dimensions_json}
 }}"""
 
         return prompt
@@ -521,6 +644,8 @@ Respond with CONCISE JSON:
     def _build_document_group_prompt(self, group_size: int) -> str:
         """Build prompt for comparing a group of similar documents."""
         taste_section = self._build_taste_section("document")
+        dimensions_section = self._build_dimensions_section()
+        dimensions_json = self._build_dimensions_json_fragment()
         cat_names = self._category_names
         cat_str = " or ".join([f'"{c}"' for c in cat_names])
 
@@ -532,6 +657,7 @@ Respond with CONCISE JSON:
 {self._build_category_format()}
 
 {scoring_rubric}
+{dimensions_section}
 
 **YOUR TASK:**
 1. Compare ALL documents in this group
@@ -548,7 +674,7 @@ Respond with JSON array (one entry per document, SAME ORDER as provided):
     "score": 1 to 5,
     "reasoning": "Why this rank? (1 sentence)",
     "content_summary": "2-3 sentence summary",
-    "key_topics": ["topic1", "topic2"]
+    "key_topics": ["topic1", "topic2"]{dimensions_json}
   }},
   ...
 ]"""

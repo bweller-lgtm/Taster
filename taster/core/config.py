@@ -49,19 +49,25 @@ class FileTypeConfig:
     video_extensions: List[str] = field(default_factory=lambda: [
         ".mp4", ".mov", ".avi", ".mkv", ".m4v", ".3gp", ".wmv", ".flv", ".webm"
     ])
+    audio_extensions: List[str] = field(default_factory=lambda: [
+        ".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a", ".wma", ".opus", ".aiff"
+    ])
 
     def __post_init__(self):
         """Convert to sets for fast lookup."""
         self.image_extensions = set(ext.lower() for ext in self.image_extensions)
         self.video_extensions = set(ext.lower() for ext in self.video_extensions)
+        self.audio_extensions = set(ext.lower() for ext in self.audio_extensions)
 
 
 @dataclass
 class ClassificationConfig:
     """Classification configuration."""
     classify_videos: bool = True
+    classify_audio: bool = True
     parallel_video_workers: int = 10
     parallel_photo_workers: int = 10
+    parallel_audio_workers: int = 10
     share_threshold: int = 4
     review_threshold: int = 3
     burst_rank_consider: int = 2
@@ -198,6 +204,9 @@ class CostConfig:
     tokens_per_video_second: int = 300
     prompt_tokens_video: int = 1500
     output_tokens_video: int = 300
+    tokens_per_audio_second: int = 32
+    prompt_tokens_audio: int = 1500
+    output_tokens_audio: int = 300
 
 
 @dataclass

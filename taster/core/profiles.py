@@ -29,6 +29,13 @@ class PhotoProfileSettings:
 
 
 @dataclass
+class AudioProfileSettings:
+    """Audio-specific profile settings."""
+    min_duration_seconds: float = 0.0
+    max_duration_seconds: float = 3600.0
+
+
+@dataclass
 class DocumentProfileSettings:
     """Document-specific profile settings."""
     extract_text: bool = True
@@ -62,9 +69,13 @@ class TasteProfile:
     # Optional scoring rubric mapping 1-5 to descriptions
     scoring_rubric: Dict[str, str] = field(default_factory=dict)
 
+    # Dimension scoring — each item is {"name": "...", "description": "..."}
+    dimensions: List[Dict[str, str]] = field(default_factory=list)
+
     # Optional media-type-specific settings
     photo_settings: Optional[PhotoProfileSettings] = None
     document_settings: Optional[DocumentProfileSettings] = None
+    audio_settings: Optional[AudioProfileSettings] = None
 
     # Metadata
     created_at: str = ""
@@ -86,6 +97,8 @@ class TasteProfile:
             self.photo_settings = PhotoProfileSettings(**self.photo_settings)
         if isinstance(self.document_settings, dict):
             self.document_settings = DocumentProfileSettings(**self.document_settings)
+        if isinstance(self.audio_settings, dict):
+            self.audio_settings = AudioProfileSettings(**self.audio_settings)
 
     @property
     def category_names(self) -> List[str]:
@@ -107,8 +120,10 @@ class TasteProfile:
         data["philosophy"] = self.philosophy
         data["scoring_rubric"] = self.scoring_rubric
         data["thresholds"] = self.thresholds
+        data["dimensions"] = self.dimensions
         data["photo_settings"] = asdict(self.photo_settings) if self.photo_settings else None
         data["document_settings"] = asdict(self.document_settings) if self.document_settings else None
+        data["audio_settings"] = asdict(self.audio_settings) if self.audio_settings else None
         data["created_at"] = self.created_at
         data["updated_at"] = self.updated_at
         data["version"] = self.version
@@ -140,8 +155,10 @@ class ProfileManager:
         specific_guidance: Optional[List[str]] = None,
         philosophy: str = "",
         thresholds: Optional[Dict[str, float]] = None,
+        dimensions: Optional[List[Dict[str, str]]] = None,
         photo_settings: Optional[Dict] = None,
         document_settings: Optional[Dict] = None,
+        audio_settings: Optional[Dict] = None,
     ) -> TasteProfile:
         """Create and save a new taste profile."""
         profile = TasteProfile(
@@ -156,8 +173,10 @@ class ProfileManager:
             specific_guidance=specific_guidance or [],
             philosophy=philosophy,
             thresholds=thresholds or {},
+            dimensions=dimensions or [],
             photo_settings=PhotoProfileSettings(**photo_settings) if photo_settings else None,
             document_settings=DocumentProfileSettings(**document_settings) if document_settings else None,
+            audio_settings=AudioProfileSettings(**audio_settings) if audio_settings else None,
         )
         self._save_profile(profile)
         return profile

@@ -8,6 +8,7 @@ from taster.core.profiles import (
     CategoryDefinition,
     PhotoProfileSettings,
     DocumentProfileSettings,
+    AudioProfileSettings,
     ProfileManager,
 )
 
@@ -87,6 +88,47 @@ class TestTasteProfile:
         assert p2.philosophy == "test"
         assert p2.category_names == ["A"]
         assert p2.thresholds == {"A": 0.5}
+
+    def test_dimensions_roundtrip(self):
+        dims = [
+            {"name": "composition", "description": "Framing and balance"},
+            {"name": "expression", "description": "Facial expression quality"},
+        ]
+        p = TasteProfile(
+            name="dim-test", description="test", media_types=["image"],
+            categories=[CategoryDefinition("A", "a")],
+            dimensions=dims,
+        )
+        d = p.to_dict()
+        assert d["dimensions"] == dims
+
+        p2 = TasteProfile.from_dict(d)
+        assert p2.dimensions == dims
+
+    def test_audio_settings_conversion(self):
+        p = TasteProfile(
+            name="t", description="t", media_types=["audio"],
+            audio_settings={"min_duration_seconds": 5.0, "max_duration_seconds": 300.0},
+        )
+        assert isinstance(p.audio_settings, AudioProfileSettings)
+        assert p.audio_settings.min_duration_seconds == 5.0
+
+    def test_audio_settings_roundtrip(self):
+        p = TasteProfile(
+            name="t", description="t", media_types=["audio"],
+            audio_settings=AudioProfileSettings(min_duration_seconds=1.0),
+        )
+        d = p.to_dict()
+        assert d["audio_settings"]["min_duration_seconds"] == 1.0
+
+        p2 = TasteProfile.from_dict(d)
+        assert isinstance(p2.audio_settings, AudioProfileSettings)
+        assert p2.audio_settings.min_duration_seconds == 1.0
+
+    def test_dimensions_default_empty(self):
+        p = TasteProfile(name="t", description="t", media_types=["image"])
+        assert p.dimensions == []
+        assert p.to_dict()["dimensions"] == []
 
     def test_from_dict(self):
         data = {
@@ -203,6 +245,31 @@ class TestProfileManagerCRUD:
         assert profile.thresholds == {"Keep": 0.7}
         assert profile.photo_settings.enable_burst_detection is False
         assert profile.document_settings.similarity_threshold == 0.9
+
+    def test_create_with_dimensions(self, pm):
+        dims = [{"name": "quality", "description": "Overall quality"}]
+        profile = pm.create_profile(
+            name="dim-profile",
+            description="profile with dimensions",
+            media_types=["image"],
+            categories=[{"name": "A", "description": "a"}],
+            dimensions=dims,
+        )
+        assert profile.dimensions == dims
+
+        loaded = pm.load_profile("dim-profile")
+        assert loaded.dimensions == dims
+
+    def test_create_with_audio_settings(self, pm):
+        profile = pm.create_profile(
+            name="audio-profile",
+            description="audio profile",
+            media_types=["audio"],
+            categories=[{"name": "A", "description": "a"}],
+            audio_settings={"min_duration_seconds": 10.0},
+        )
+        assert isinstance(profile.audio_settings, AudioProfileSettings)
+        assert profile.audio_settings.min_duration_seconds == 10.0
 
 
 # ── Default profiles ─────────────────────────────────────────────────

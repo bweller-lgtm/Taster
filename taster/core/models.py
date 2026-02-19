@@ -288,20 +288,21 @@ class GeminiClient(AIClient):
         result = []
         for item in prompt:
             if isinstance(item, Path):
-                if FileTypeRegistry.is_video(item):
-                    # Upload video to Gemini and wait for processing
+                if FileTypeRegistry.is_video(item) or FileTypeRegistry.is_audio(item):
+                    # Upload video/audio to Gemini and wait for processing
+                    media_label = "Audio" if FileTypeRegistry.is_audio(item) else "Video"
                     try:
-                        video_file = self._genai.upload_file(str(item))
-                        # Wait for video to be ready (ACTIVE state)
-                        while video_file.state.name == "PROCESSING":
+                        uploaded_file = self._genai.upload_file(str(item))
+                        # Wait for file to be ready (ACTIVE state)
+                        while uploaded_file.state.name == "PROCESSING":
                             time.sleep(2)
-                            video_file = self._genai.get_file(video_file.name)
-                        if video_file.state.name == "FAILED":
-                            print(f"Warning: Video processing failed for {item}")
+                            uploaded_file = self._genai.get_file(uploaded_file.name)
+                        if uploaded_file.state.name == "FAILED":
+                            print(f"Warning: {media_label} processing failed for {item}")
                             continue
-                        result.append(video_file)
+                        result.append(uploaded_file)
                     except Exception as e:
-                        print(f"Warning: Error uploading video {item}: {e}")
+                        print(f"Warning: Error uploading {media_label.lower()} {item}: {e}")
                 else:
                     # Load image
                     try:
