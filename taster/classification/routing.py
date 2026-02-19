@@ -314,6 +314,20 @@ Respond with JSON:
         # Videos use same logic as singletons
         return self.route_singleton(classification)
 
+    def route_audio(self, classification: Dict[str, Any]) -> str:
+        """
+        Route an audio file based on classification.
+
+        Uses profile-threshold routing (same as documents). No children/appropriateness checks.
+
+        Args:
+            classification: Classification result dict.
+
+        Returns:
+            Destination category name.
+        """
+        return self.route_document(classification)
+
     def route_document(self, classification: Dict[str, Any]) -> str:
         """
         Route a document based on classification using profile-defined categories.

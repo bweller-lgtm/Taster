@@ -270,3 +270,49 @@ class TestRefineFromCorrections:
             synth.refine_from_corrections("fail-refine", [
                 {"file_path": "/a.jpg", "original_category": "A", "correct_category": "B"},
             ])
+
+    def test_refine_with_dimension_scores(self, mock_client, pm):
+        """Corrections with dimension scores should be included in the prompt."""
+        pm.create_profile(
+            name="dim-refine",
+            description="Test",
+            media_types=["image"],
+            categories=[{"name": "Share", "description": "Share"}],
+            top_priorities=["Quality"],
+        )
+
+        mock_client.generate_json.return_value = {
+            "top_priorities": ["Expression", "Quality"],
+            "specific_guidance": ["Pay more attention to expressions"],
+            "changes_made": ["Adjusted expression scoring"],
+            "dimension_adjustments": ["composition dimension was too lenient"],
+        }
+
+        synth = ProfileSynthesizer(mock_client, pm)
+        updated = synth.refine_from_corrections("dim-refine", [
+            {
+                "file_path": "/photo.jpg",
+                "original_category": "Storage",
+                "correct_category": "Share",
+                "reason": "Great expressions",
+                "dimensions": {"composition": 3, "expression": 2},
+            },
+        ])
+
+        # Verify the prompt sent to AI included dimension scores
+        call_args = mock_client.generate_json.call_args
+        prompt_text = call_args[1]["prompt"]
+        assert "composition=3" in prompt_text
+        assert "expression=2" in prompt_text
+        assert "dimension" in prompt_text.lower()
+
+        dim_adj = getattr(updated, "_dimension_adjustments", [])
+        assert len(dim_adj) > 0
+
+    def test_format_correction_dimensions(self):
+        assert ProfileSynthesizer._format_correction_dimensions({}) == ""
+        assert ProfileSynthesizer._format_correction_dimensions(None) == ""
+        result = ProfileSynthesizer._format_correction_dimensions({"a": 3, "b": None, "c": 5})
+        assert "a=3" in result
+        assert "c=5" in result
+        assert "b=" not in result  # None values excluded

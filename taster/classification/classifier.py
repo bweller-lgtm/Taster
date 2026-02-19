@@ -53,6 +53,28 @@ class MediaClassifier:
         return "Review"
 
     @property
+    def _expected_dimension_names(self) -> List[str]:
+        """Get the expected dimension names (same derivation as prompt builder)."""
+        import re
+        if self.profile and self.profile.dimensions:
+            return [d["name"] for d in self.profile.dimensions]
+        priorities = []
+        if self.profile:
+            priorities = self.profile.top_priorities
+        if not priorities:
+            return []
+        names = []
+        for p in priorities[:7]:
+            clean = re.sub(r"'s\b", "", p.lower())
+            clean = re.sub(r"[()]", "", clean)
+            name = re.sub(r"[^a-z0-9]+", "_", clean).strip("_")
+            if len(name) > 40:
+                name = name[:40].rsplit("_", 1)[0]
+            if name:
+                names.append(name)
+        return names
+
+    @property
     def _valid_categories(self) -> List[str]:
         """Get valid classification categories."""
         if self.profile:
@@ -339,6 +361,73 @@ class MediaClassifier:
 
         return result
 
+    def classify_audio(
+        self,
+        audio_path: Path,
+        use_cache: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Classify an audio file.
+
+        Args:
+            audio_path: Path to audio file.
+            use_cache: Whether to use cached classification.
+
+        Returns:
+            Classification result dict with keys:
+            - classification: category name
+            - score: 1 to 5
+            - reasoning: explanation string
+            - audio_quality: "good", "poor", or "silent"
+            - content_summary: brief description of audio content
+        """
+        # Check cache
+        if use_cache and self.cache_manager is not None:
+            cache_key = CacheKey.from_file(audio_path)
+            cached = self.cache_manager.get("gemini", cache_key)
+            if cached is not None:
+                return cached
+
+        # Build prompt
+        prompt = self.prompt_builder.build_singleton_prompt(media_type="audio")
+
+        # Define the API call
+        def call_gemini_audio() -> Dict[str, Any]:
+            try:
+                result = self.client.generate_json(
+                    prompt=[prompt, audio_path],  # Path will be uploaded by provider
+                    fallback=self._create_fallback_response("API error", is_audio=True),
+                    generation_config={"max_output_tokens": self.max_output_tokens},
+                    handle_safety_errors=True
+                )
+                return self._validate_audio_response(result)
+            except Exception as e:
+                print(f"Audio classification error for {audio_path.name}: {e}")
+                return self._create_fallback_response(f"Error: {e}", is_audio=True)
+
+        # Call with retry
+        result = self._execute_with_retry(call_gemini_audio, f"Audio {audio_path.name}")
+
+        # Cache result
+        if use_cache and self.cache_manager is not None:
+            cache_key = CacheKey.from_file(audio_path)
+            self.cache_manager.set("gemini", cache_key, result)
+
+        return result
+
+    def _validate_audio_response(self, response: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate and fix audio classification response."""
+        # Validate as singleton first (handles classification, score, dimensions, etc.)
+        response = self._validate_singleton_response(response)
+
+        # Ensure audio-specific fields
+        if "audio_quality" not in response:
+            response["audio_quality"] = "unknown"
+        if "content_summary" not in response:
+            response["content_summary"] = ""
+
+        return response
+
     def classify_batch(
         self,
         photos: List[Path],
@@ -557,6 +646,7 @@ class MediaClassifier:
         reason: str,
         rank: Optional[int] = None,
         is_video: bool = False,
+        is_audio: bool = False,
         error_type: str = "api_error"
     ) -> Dict[str, Any]:
         """
@@ -566,6 +656,7 @@ class MediaClassifier:
             reason: Reason for fallback.
             rank: Optional rank for burst responses.
             is_video: Whether this is a video response.
+            is_audio: Whether this is an audio response.
             error_type: Type of error that caused fallback. One of:
                 - "api_error": General API call failure
                 - "load_error": Failed to load image/video file
@@ -595,6 +686,15 @@ class MediaClassifier:
 
         if is_video:
             response["audio_quality"] = "unknown"
+
+        if is_audio:
+            response["audio_quality"] = "unknown"
+            response["content_summary"] = ""
+
+        # Include dimensions when expected
+        expected = self._expected_dimension_names
+        if expected:
+            response["dimensions"] = {name: None for name in expected}
 
         return response
 
@@ -652,6 +752,27 @@ class MediaClassifier:
 
         return self._create_fallback_response("All retries exhausted", error_type="api_error")
 
+    def _validate_dimensions(self, response: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate and normalise the dimension scores in a response."""
+        expected = self._expected_dimension_names
+        if not expected:
+            return response
+
+        dims = response.get("dimensions")
+        if not isinstance(dims, dict):
+            dims = {}
+
+        validated: Dict[str, Optional[int]] = {}
+        for name in expected:
+            val = dims.get(name)
+            if isinstance(val, (int, float)):
+                validated[name] = max(1, min(5, int(val)))
+            else:
+                validated[name] = None
+
+        response["dimensions"] = validated
+        return response
+
     def _validate_singleton_response(self, response: Dict[str, Any]) -> Dict[str, Any]:
         """Validate and fix singleton response."""
         # Ensure required fields
@@ -675,6 +796,9 @@ class MediaClassifier:
             response["contains_children"] = None
         if "is_appropriate" not in response:
             response["is_appropriate"] = None
+
+        # Validate dimensions
+        response = self._validate_dimensions(response)
 
         # Mark as successful (non-error) response
         if "is_error_fallback" not in response:

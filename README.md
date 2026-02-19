@@ -20,7 +20,7 @@ Sort 1,000 family photos in 10 minutes for $1.30. Extract coding standards from 
   <img src="https://raw.githubusercontent.com/bweller-lgtm/Taster/master/assets/demo_terminal.png" alt="Terminal output showing classification of 280 files" width="780">
 </p>
 
-Every file gets a score and a plain-English reason, grounded in the taste profile's criteria:
+Every file gets a score, a plain-English reason, and per-dimension diagnostic scores -- all grounded in the taste profile's criteria:
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/bweller-lgtm/Taster/master/assets/demo_reasoning.png" alt="AI reasoning for each classification decision" width="780">
@@ -32,6 +32,26 @@ Burst photos taken seconds apart are compared head-to-head -- AI picks the best 
   <img src="https://raw.githubusercontent.com/bweller-lgtm/Taster/master/assets/demo_burst.png" alt="Burst intelligence: AI picks the best from a series" width="780">
 </p>
 
+Dimension scores show *why* each file scored the way it did -- which priorities drove the decision:
+
+```
+8_hero_share.jpg [Share] score=5
+  parent_child_interaction_quality:        4
+  baby_expression_mischief_joy_engagement: 5
+  parent_expressions_should_be_engaged:    4
+  baby_face_clearly_visible:               5
+  genuine_emotional_moments:               5
+
+4_technical_pass_share.jpg [Storage] score=2
+  parent_child_interaction_quality:        1  ← no parent in frame
+  baby_expression_mischief_joy_engagement: 2
+  parent_expressions_should_be_engaged:    1  ← no parent in frame
+  baby_face_clearly_visible:               5
+  genuine_emotional_moments:               2
+```
+
+Dimensions are auto-derived from the profile's `top_priorities`. When a photo scores high on face visibility but low on interaction and emotion, you know *exactly* what to adjust.
+
 Full score distribution and category breakdown:
 
 <p align="center">
@@ -42,9 +62,9 @@ Full score distribution and category breakdown:
 
 ## How It Works
 
-1. **Classify** -- AI evaluates each file against your profile's criteria and sorts it into categories
-2. **Learn** -- Feed the best results back in, and Taster synthesizes what makes them good
-3. **Apply** -- The generated profile becomes a reusable classifier for future batches
+1. **Classify** -- AI evaluates each file against your profile's criteria, sorts it into categories, and returns per-dimension diagnostic scores
+2. **Learn** -- Feed results back in with corrections, and Taster uses dimension scores to pinpoint what needs adjusting
+3. **Apply** -- The refined profile becomes a sharper classifier for future batches
 
 Each cycle sharpens the profile. What starts as "sort my photos" becomes a rich, nuanced document that captures exactly how you think about quality -- then enforces it automatically.
 
@@ -144,7 +164,7 @@ Profiles improve over time:
 
 1. **Pairwise training** -- Run `taster train <folder>` to launch a Gradio UI. Compare photos side-by-side, pick keepers from burst galleries, and synthesize a profile when you have enough labels (15+).
 
-2. **Corrective refinement** -- After classifying a folder, correct the results you disagree with and call `taster_refine_profile` in Claude Desktop. Taster analyzes the gap between its predictions and your corrections and adjusts criteria, thresholds, and priorities. Repeat each batch to continuously sharpen the profile -- this produces the highest fidelity over time.
+2. **Corrective refinement** -- After classifying a folder, correct the results you disagree with and call `taster_refine_profile` in Claude Desktop. Taster analyzes the gap between its predictions and your corrections -- including per-dimension scores that reveal *which* criteria are miscalibrated -- and adjusts priorities, thresholds, and guidance. Repeat each batch to continuously sharpen the profile.
 
 3. **Simple feedback** -- Submit individual corrections via `taster_submit_feedback` for lightweight feedback without full refinement.
 
@@ -327,6 +347,7 @@ Taster supports three AI providers. Install only the SDK(s) you need.
 |---------|--------|---------------------|-------------------|
 | Images | Native | Base64 | Base64 |
 | Videos | Native upload | Frame extraction | Frame extraction |
+| Audio | Native upload | Text fallback | Text fallback |
 | PDFs | Native upload | Page-to-image | Native |
 | Relative cost | Cheapest | Mid | Most expensive |
 | Env var | `GEMINI_API_KEY` | `OPENAI_API_KEY` | `ANTHROPIC_API_KEY` |
@@ -344,6 +365,7 @@ Gemini 3 Flash pricing (cheapest provider):
 | Photo | ~$0.0013 |
 | Burst photo | ~$0.00043 (shared prompt) |
 | Video | ~$0.011 per minute |
+| Audio | ~$0.006 per minute |
 | Document | ~$0.002-0.01 (varies by size) |
 
 **Example:** 1,000 photos = ~$1.30 (first run), ~$0 (cached re-run).
@@ -369,6 +391,8 @@ classification:
   classify_videos: true
   parallel_photo_workers: 10  # Concurrent photo classification workers
   parallel_video_workers: 10  # Concurrent video classification workers
+  classify_audio: true
+  parallel_audio_workers: 10  # Concurrent audio classification workers
 
 profiles:
   profiles_dir: "profiles"
@@ -396,12 +420,13 @@ See `config.yaml` for all options with inline documentation.
 |------|-----------|
 | **Images** | `.jpg` `.jpeg` `.png` `.gif` `.webp` `.heic` `.tif` `.tiff` `.bmp` |
 | **Videos** | `.mp4` `.mov` `.avi` `.mkv` `.m4v` `.3gp` `.wmv` `.flv` `.webm` |
+| **Audio** | `.mp3` `.wav` `.flac` `.aac` `.ogg` `.m4a` `.wma` `.opus` `.aiff` |
 | **Documents** | `.pdf` `.docx` `.xlsx` `.pptx` `.html` `.htm` `.txt` `.md` `.csv` `.rtf` |
 | **Source Code** | `.py` `.js` `.ts` `.jsx` `.tsx` `.java` `.go` `.rs` `.rb` `.cpp` `.c` `.cs` `.swift` `.kt` `.php` `.lua` `.scala` + more |
 | **Config / IaC** | `.yaml` `.yml` `.toml` `.json` `.xml` `.tf` `.hcl` `.dockerfile` |
 | **Shell** | `.sh` `.bash` `.zsh` `.ps1` `.sql` |
 
-PDFs and videos are uploaded natively to Gemini. For OpenAI and Anthropic, videos are frame-extracted and PDFs are rendered to images automatically.
+PDFs, videos, and audio are uploaded natively to Gemini. For OpenAI and Anthropic, videos are frame-extracted and PDFs are rendered to images automatically. Audio requires Gemini for full analysis.
 
 ---
 
@@ -500,4 +525,4 @@ pytest tests/ --cov=taster --cov-report=html     # With coverage
 
 Built with Google Gemini, OpenAI, Anthropic, OpenCLIP, sentence-transformers, FastAPI, MCP SDK, Gradio, and Claude Code.
 
-**Version:** 3.3.1 | **PyPI:** [`taster`](https://pypi.org/project/taster/) | **Last Updated:** February 2026
+**Version:** 3.4.0 | **PyPI:** [`taster`](https://pypi.org/project/taster/) | **Last Updated:** February 2026

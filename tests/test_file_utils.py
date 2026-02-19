@@ -25,10 +25,25 @@ class TestFileTypeRegistry:
         assert not FileTypeRegistry.is_video(Path("photo.jpg"))
         assert not FileTypeRegistry.is_video(Path("document.pdf"))
 
+    def test_is_audio(self):
+        """Test audio detection."""
+        assert FileTypeRegistry.is_audio(Path("song.mp3"))
+        assert FileTypeRegistry.is_audio(Path("recording.WAV"))
+        assert FileTypeRegistry.is_audio(Path("track.flac"))
+        assert FileTypeRegistry.is_audio(Path("clip.aac"))
+        assert FileTypeRegistry.is_audio(Path("voice.ogg"))
+        assert FileTypeRegistry.is_audio(Path("music.m4a"))
+        assert FileTypeRegistry.is_audio(Path("speech.opus"))
+        assert FileTypeRegistry.is_audio(Path("sample.aiff"))
+        assert not FileTypeRegistry.is_audio(Path("photo.jpg"))
+        assert not FileTypeRegistry.is_audio(Path("video.mp4"))
+        assert not FileTypeRegistry.is_audio(Path("document.pdf"))
+
     def test_is_media(self):
-        """Test media detection."""
+        """Test media detection (includes audio)."""
         assert FileTypeRegistry.is_media(Path("photo.jpg"))
         assert FileTypeRegistry.is_media(Path("video.mp4"))
+        assert FileTypeRegistry.is_media(Path("song.mp3"))
         assert not FileTypeRegistry.is_media(Path("document.pdf"))
 
     def test_list_images(self, tmp_path):
@@ -58,17 +73,31 @@ class TestFileTypeRegistry:
         assert any(p.name == "video1.mp4" for p in videos)
         assert any(p.name == "video2.mov" for p in videos)
 
+    def test_list_audio(self, tmp_path):
+        """Test listing audio files."""
+        (tmp_path / "song.mp3").touch()
+        (tmp_path / "recording.wav").touch()
+        (tmp_path / "photo.jpg").touch()
+        (tmp_path / "video.mp4").touch()
+
+        audio = FileTypeRegistry.list_audio(tmp_path)
+        assert len(audio) == 2
+        assert any(p.name == "song.mp3" for p in audio)
+        assert any(p.name == "recording.wav" for p in audio)
+
     def test_list_media(self, tmp_path):
-        """Test listing all media."""
+        """Test listing all media (includes audio)."""
         # Create test files
         (tmp_path / "photo.jpg").touch()
         (tmp_path / "video.mp4").touch()
+        (tmp_path / "song.mp3").touch()
         (tmp_path / "document.txt").touch()
 
         media = FileTypeRegistry.list_media(tmp_path)
 
         assert len(media["images"]) == 1
         assert len(media["videos"]) == 1
+        assert len(media["audio"]) == 1
 
     def test_list_recursive(self, tmp_path):
         """Test recursive listing."""
@@ -150,6 +179,29 @@ class TestFileTypeRegistry:
         assert "main.py" in doc_names
         assert len(media["images"]) == 1
         assert len(media["videos"]) == 1
+
+    def test_list_all_media_includes_audio(self, tmp_path):
+        """list_all_media should include audio files under 'audio'."""
+        (tmp_path / "song.mp3").touch()
+        (tmp_path / "photo.jpg").touch()
+
+        media = FileTypeRegistry.list_all_media(tmp_path)
+        assert len(media["audio"]) == 1
+        assert media["audio"][0].name == "song.mp3"
+
+    def test_detect_media_type_audio(self, tmp_path):
+        """detect_media_type returns 'audio' for audio-only folders."""
+        (tmp_path / "song.mp3").touch()
+        (tmp_path / "track.wav").touch()
+
+        assert FileTypeRegistry.detect_media_type(tmp_path) == "audio"
+
+    def test_detect_media_type_mixed_with_audio(self, tmp_path):
+        """detect_media_type returns 'mixed' when images and audio are present."""
+        (tmp_path / "photo.jpg").touch()
+        (tmp_path / "song.mp3").touch()
+
+        assert FileTypeRegistry.detect_media_type(tmp_path) == "mixed"
 
 
 class TestImageUtils:

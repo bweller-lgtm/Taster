@@ -82,7 +82,10 @@ class AnthropicProvider(AIClient):
 
         parts: List[Dict[str, Any]] = []
 
-        if FileTypeRegistry.is_video(path):
+        if FileTypeRegistry.is_audio(path):
+            parts.append({"type": "text", "text": f"[Audio: {path.name}]"})
+
+        elif FileTypeRegistry.is_video(path):
             frames = VideoFrameExtractor.extract_frames(
                 path, max_frames=self.video_frame_count
             )

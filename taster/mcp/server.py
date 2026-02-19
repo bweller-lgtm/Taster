@@ -244,6 +244,18 @@ def create_mcp_server():
                             "type": "string",
                             "description": "Overall philosophy statement guiding classification decisions",
                         },
+                        "dimensions": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {"type": "string"},
+                                    "description": {"type": "string"},
+                                },
+                                "required": ["name", "description"],
+                            },
+                            "description": "Scoring dimensions for diagnostic per-dimension scores (e.g., [{name: 'composition', description: 'Framing and visual balance'}]). If omitted, auto-derived from top_priorities.",
+                        },
                     },
                     "required": ["name", "description", "media_types", "categories"],
                 },
@@ -300,6 +312,18 @@ def create_mcp_server():
                         "philosophy": {
                             "type": "string",
                             "description": "New philosophy statement",
+                        },
+                        "dimensions": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {"type": "string"},
+                                    "description": {"type": "string"},
+                                },
+                                "required": ["name", "description"],
+                            },
+                            "description": "New scoring dimensions (replaces existing)",
                         },
                     },
                     "required": ["profile_name"],
@@ -529,10 +553,14 @@ def create_mcp_server():
                                         "type": "string",
                                         "description": "Why this category is correct",
                                     },
+                                    "dimensions": {
+                                        "type": "object",
+                                        "description": "Per-dimension scores from the original classification (e.g., {\"composition\": 3, \"expression\": 2})",
+                                    },
                                 },
                                 "required": ["file_path", "original_category", "correct_category"],
                             },
-                            "description": "Array of classification corrections with reasoning",
+                            "description": "Array of classification corrections with reasoning and optional dimension scores",
                         },
                     },
                     "required": ["profile_name", "corrections"],
@@ -562,7 +590,7 @@ def create_mcp_server():
 _GETTING_STARTED_PROMPT = """\
 I have Taster connected. Help me understand what it can do and how to get started.
 
-Taster is a media classification tool that sorts files (photos, videos, documents) \
+Taster is a media classification tool that sorts files (photos, videos, audio, documents) \
 into categories based on "taste profiles" — customizable rules that define what's good, \
 what's bad, and how to sort things.
 
@@ -739,6 +767,7 @@ def _handle_create_profile(pm: ProfileManager, arguments: dict) -> Any:
         negative_criteria=arguments.get("negative_criteria", {}),
         specific_guidance=arguments.get("specific_guidance", []),
         philosophy=arguments.get("philosophy", ""),
+        dimensions=arguments.get("dimensions"),
     )
     return {"status": "created", "profile": profile.to_dict()}
 
@@ -757,7 +786,7 @@ def _handle_update_profile(pm: ProfileManager, arguments: dict) -> Any:
     updatable = [
         "description", "categories", "top_priorities",
         "positive_criteria", "negative_criteria",
-        "specific_guidance", "philosophy",
+        "specific_guidance", "philosophy", "dimensions",
     ]
     kwargs = {k: v for k, v in arguments.items() if k in updatable and v is not None}
 
@@ -892,14 +921,14 @@ Rules:
     }
 
 
-def _estimate_folder_cost(images, videos, documents, profile_name) -> dict:
+def _estimate_folder_cost(images, videos, audio, documents, profile_name) -> dict:
     """Scan folder and return cost/time estimate without classifying."""
     from ..pipelines.base import (
         _TOKENS_PER_IMAGE, _VIDEO_TOKENS_PER_SEC, _VIDEO_BITRATE_BPS,
         _PROMPT_TOKENS, _OUTPUT_TOKENS, _INPUT_PRICE_PER_M, _OUTPUT_PRICE_PER_M,
     )
 
-    n_img, n_vid, n_doc = len(images), len(videos), len(documents)
+    n_img, n_vid, n_aud, n_doc = len(images), len(videos), len(audio), len(documents)
 
     # Estimate video tokens from file sizes
     video_tokens = 0
@@ -912,31 +941,52 @@ def _estimate_folder_cost(images, videos, documents, profile_name) -> dict:
         total_video_seconds += duration
         video_tokens += int(duration * _VIDEO_TOKENS_PER_SEC)
 
+    # Estimate audio tokens (audio is ~32 tokens/sec, much lighter than video)
+    audio_tokens = 0
+    total_audio_seconds = 0
+    _AUDIO_BITRATE_BPS = 128_000  # rough average for compressed audio
+    for a in audio:
+        try:
+            duration = max(a.stat().st_size * 8 / _AUDIO_BITRATE_BPS, 1)
+        except OSError:
+            duration = 60
+        total_audio_seconds += duration
+        audio_tokens += int(duration * 32)
+
     image_tokens = n_img * _TOKENS_PER_IMAGE
     doc_tokens = n_doc * 2000
 
     # Estimate API calls (bursts share calls, rough ~60% burst rate)
-    api_calls = max(int(n_img * 0.7) + n_vid + n_doc, 1)
+    api_calls = max(int(n_img * 0.7) + n_vid + n_aud + n_doc, 1)
     prompt_tokens = api_calls * _PROMPT_TOKENS
     output_tokens = api_calls * _OUTPUT_TOKENS
 
-    total_input = video_tokens + image_tokens + doc_tokens + prompt_tokens
+    total_input = video_tokens + audio_tokens + image_tokens + doc_tokens + prompt_tokens
     input_cost = total_input / 1_000_000 * _INPUT_PRICE_PER_M
     output_cost = output_tokens / 1_000_000 * _OUTPUT_PRICE_PER_M
     total_cost = input_cost + output_cost
 
-    # Estimate time: ~0.5s per image API call + ~2s per video (upload + process)
-    est_minutes = (api_calls * 0.5 + n_vid * 60) / 60
+    # Estimate time: ~0.5s per image API call + ~2s per video + ~1s per audio (upload + process)
+    est_minutes = (api_calls * 0.5 + n_vid * 60 + n_aud * 10) / 60
+
+    file_counts = {"images": n_img, "videos": n_vid, "audio": n_aud, "documents": n_doc, "total": n_img + n_vid + n_aud + n_doc}
+
+    parts = []
+    if n_img: parts.append(f"{n_img} images")
+    if n_vid: parts.append(f"{n_vid} videos")
+    if n_aud: parts.append(f"{n_aud} audio files")
+    if n_doc: parts.append(f"{n_doc} documents")
 
     return {
         "status": "estimate",
         "profile": profile_name,
-        "files": {"images": n_img, "videos": n_vid, "documents": n_doc, "total": n_img + n_vid + n_doc},
+        "files": file_counts,
         "estimated_cost_usd": round(total_cost, 2),
         "estimated_minutes": round(est_minutes, 0),
         "estimated_video_minutes": round(total_video_seconds / 60, 1),
+        "estimated_audio_minutes": round(total_audio_seconds / 60, 1),
         "message": (
-            f"Found {n_img} images, {n_vid} videos, {n_doc} documents. "
+            f"Found {', '.join(parts)}. "
             f"Estimated cost: ~${total_cost:.2f}. "
             f"Estimated time: ~{est_minutes:.0f} minutes. "
             f"Call again without estimate_only to start classification."
@@ -958,10 +1008,12 @@ def _handle_classify_folder(pm: ProfileManager, arguments: dict) -> Any:
     all_files = FileTypeRegistry.list_all_media(folder)
     images = all_files.get("images", [])
     videos = all_files.get("videos", [])
+    audio = all_files.get("audio", [])
     documents = all_files.get("documents", [])
     all_media = (
         [(p, "image") for p in images]
         + [(p, "video") for p in videos]
+        + [(p, "audio") for p in audio]
         + [(p, "document") for p in documents]
     )
     total = len(all_media)
@@ -975,7 +1027,7 @@ def _handle_classify_folder(pm: ProfileManager, arguments: dict) -> Any:
 
     # ── Estimate-only mode ─────────────────────────────────────────
     if arguments.get("estimate_only", False):
-        return _estimate_folder_cost(images, videos, documents, arguments["profile_name"])
+        return _estimate_folder_cost(images, videos, audio, documents, arguments["profile_name"])
 
     # ── Full classification ────────────────────────────────────────
     api_err = _require_api_key()
@@ -1047,11 +1099,14 @@ def _handle_classify_folder(pm: ProfileManager, arguments: dict) -> Any:
             elif media_type == "video":
                 classification = classifier.classify_video(file_path)
                 destination = router.route_video(classification)
+            elif media_type == "audio":
+                classification = classifier.classify_audio(file_path)
+                destination = router.route_audio(classification)
             else:
                 classification = classifier.classify_document(file_path)
                 destination = router.route_document(classification)
 
-            results.append({
+            result_entry = {
                 "file": str(file_path),
                 "name": file_path.name,
                 "type": media_type,
@@ -1059,7 +1114,10 @@ def _handle_classify_folder(pm: ProfileManager, arguments: dict) -> Any:
                 "score": classification.get("score"),
                 "reasoning": classification.get("reasoning", ""),
                 "destination": destination,
-            })
+            }
+            if classification.get("dimensions"):
+                result_entry["dimensions"] = classification["dimensions"]
+            results.append(result_entry)
             stats[destination] = stats.get(destination, 0) + 1
         except Exception as e:
             print(f"[taster] ERROR classifying {file_path.name}: {e}", file=sys.stderr, flush=True)
@@ -1149,6 +1207,9 @@ def _handle_classify_files(pm: ProfileManager, arguments: dict) -> Any:
             elif FileTypeRegistry.is_video(path):
                 classification = classifier.classify_video(path)
                 destination = router.route_video(classification)
+            elif FileTypeRegistry.is_audio(path):
+                classification = classifier.classify_audio(path)
+                destination = router.route_audio(classification)
             elif FileTypeRegistry.is_document(path):
                 classification = classifier.classify_document(path)
                 destination = router.route_document(classification)
@@ -1157,14 +1218,17 @@ def _handle_classify_files(pm: ProfileManager, arguments: dict) -> Any:
                 errors += 1
                 continue
 
-            results.append({
+            result_entry = {
                 "file": fp,
                 "name": path.name,
                 "classification": classification.get("classification"),
                 "score": classification.get("score"),
                 "reasoning": classification.get("reasoning", ""),
                 "destination": destination,
-            })
+            }
+            if classification.get("dimensions"):
+                result_entry["dimensions"] = classification["dimensions"]
+            results.append(result_entry)
             stats[destination] = stats.get(destination, 0) + 1
         except Exception as e:
             results.append({"file": fp, "name": path.name, "error": str(e)})

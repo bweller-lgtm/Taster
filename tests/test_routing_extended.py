@@ -337,3 +337,31 @@ class TestDocumentRouting:
         r = Router(config, profile=profile)
         result = r.route_document({"classification": "A", "score": 1})
         assert result == "A"  # No threshold means any score accepted
+
+
+# ── Audio routing ────────────────────────────────────────────────────
+
+
+class TestAudioRouting:
+
+    def test_delegates_to_document_routing(self, config):
+        """route_audio delegates to route_document (profile-threshold routing)."""
+        profile = TasteProfile(
+            name="test", description="test", media_types=["audio"],
+            categories=[
+                CategoryDefinition("Keep", "keep it"),
+                CategoryDefinition("Skip", "skip it"),
+            ],
+            default_category="Skip",
+            thresholds={"Keep": 4},
+        )
+        r = Router(config, profile=profile)
+        assert r.route_audio({"classification": "Keep", "score": 5}) == "Keep"
+        assert r.route_audio({"classification": "Keep", "score": 3}) == "Skip"
+
+    def test_no_profile_falls_to_singleton(self, router):
+        result = router.route_audio({
+            "classification": "Share", "score": 5,
+            "contains_children": True, "is_appropriate": True,
+        })
+        assert result == "Share"

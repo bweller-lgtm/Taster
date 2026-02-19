@@ -471,6 +471,14 @@ Synthesize insights across all available analyses. Be specific, concrete, and ac
 
         return self.ai_client.generate_json(prompt=prompt, fallback=None)
 
+    @staticmethod
+    def _format_correction_dimensions(dims: dict) -> str:
+        """Format dimension scores as inline annotation for a correction."""
+        if not dims:
+            return ""
+        parts = [f"{k}={v}" for k, v in dims.items() if v is not None]
+        return f" [dim scores: {', '.join(parts)}]" if parts else ""
+
     def refine_from_corrections(
         self,
         profile_name: str,
@@ -481,7 +489,7 @@ Synthesize insights across all available analyses. Be specific, concrete, and ac
 
         Args:
             profile_name: Name of profile to refine.
-            corrections: List of {file_path, original_category, correct_category, reason}.
+            corrections: List of {file_path, original_category, correct_category, reason, dimensions?}.
 
         Returns:
             Updated TasteProfile.
@@ -493,8 +501,18 @@ Synthesize insights across all available analyses. Be specific, concrete, and ac
             f"was '{c.get('original_category', '?')}', "
             f"should be '{c.get('correct_category', '?')}'"
             f"{' — ' + c['reason'] if c.get('reason') else ''}"
+            f"{self._format_correction_dimensions(c.get('dimensions', {}))}"
             for c in corrections
         )
+
+        # Check if any corrections include dimension scores
+        has_dims = any(c.get("dimensions") for c in corrections)
+        dimension_guidance = ""
+        if has_dims:
+            dimension_guidance = """
+4. Analyze which dimensions are miscalibrated based on the dimension scores
+5. Suggest dimension_adjustments to improve scoring accuracy
+"""
 
         prompt = f"""A media classification profile needs refinement based on user corrections.
 
@@ -508,7 +526,7 @@ Analyze the correction patterns:
 1. What kinds of files are being miscategorized?
 2. What criteria need adjustment?
 3. Are there systematic biases (e.g., too strict, too lenient)?
-
+{dimension_guidance}
 Generate updated profile fields as JSON:
 {{
     "top_priorities": ["updated priority list incorporating corrections"],
@@ -522,6 +540,7 @@ Generate updated profile fields as JSON:
         "negative_factors": ["adjusted negative factors"]
     }},
     "specific_guidance": ["updated guidance rules based on correction patterns"],
+    "dimension_adjustments": ["list of dimension calibration changes, if applicable"],
     "changes_made": ["list of what was changed and why"]
 }}
 
@@ -534,6 +553,7 @@ Be specific about what changed and why."""
             raise RuntimeError("AI failed to generate refined profile data.")
 
         changes_made = result.pop("changes_made", [])
+        dimension_adjustments = result.pop("dimension_adjustments", [])
 
         # Only update fields the AI actually returned
         update_kwargs = {}
@@ -552,4 +572,5 @@ Be specific about what changed and why."""
         updated = self.pm.update_profile(profile_name, **update_kwargs)
         # Attach changes metadata for the caller
         updated._refinement_changes = changes_made
+        updated._dimension_adjustments = dimension_adjustments
         return updated
